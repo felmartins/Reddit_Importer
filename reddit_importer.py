@@ -1,3 +1,4 @@
+import os
 import wget
 import time
 import string
@@ -14,7 +15,7 @@ from credentials import user_agent, client_id, client_secret, username, password
 
 logging.basicConfig(level=logging.DEBUG)
 table = str.maketrans(dict.fromkeys(string.punctuation))
-filterlist = ["__label__de", "__label__en", "__label__pt"]
+filterlist = ["de", "en", "pt"]
 
 reddit = praw.Reddit(
     user_agent=user_agent,
@@ -51,10 +52,12 @@ def LOG_insert(file, format, text, level):
     infoLog.close()
     logger.removeHandler(infoLog)
     return
-    
-LOG_insert(logfile, formatLOG, f"Downloading language models from FastText", logging.INFO)
-modelurl ="https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
-wget.download(modelurl)
+
+if os.path.isfile("lid.176.bin") == False:
+    LOG_insert(logfile, formatLOG, f"Downloading language models from FastText", logging.INFO)
+    modelurl ="https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.bin"
+    wget.download(modelurl)
+
 pretrained_model_langdect = "lid.176.bin"
 model_langdect = fasttext.load_model(pretrained_model_langdect)
 
@@ -125,10 +128,12 @@ def apply_language_detection(testdata):
     for i in range(len(conf)):
         if conf[i] >= 0.8:
             testdata.loc[i, 'lang'] = lang[i]
+
             testdata.loc[i, 'lang_conf'] = conf[i]
         else:
-            testdata.loc[i, 'lang'] = None
+            testdata.loc[i, 'lang'] = "None"
             testdata.loc[i, 'lang_conf'] = "<0.80"
+
     body = testdata['selftext'].astype(str).tolist()
     body = [s.replace("\n", "") for s in body]
     lang_body_t = [model_langdect.predict(item) for item in body]
@@ -141,8 +146,10 @@ def apply_language_detection(testdata):
             testdata.loc[i, 'lang'] = lang2[i]
             testdata.loc[i, 'lang_conf'] = conf2[i]
         else:
-            testdata.loc[i, 'lang'] = None
+            testdata.loc[i, 'lang'] = "None"
             testdata.loc[i, 'lang_conf'] = "<0.80"
+    testdata['lang'] = testdata['lang'].map(lambda x: x.replace("__label__", ""))
+
 
 def cleanup_threads(dirty_sub_db):
     try:
@@ -258,3 +265,5 @@ def collect_subms_comments_users(batchsize = 50, start_point = "22/03/2020"):
             print("Waiting for 60 seconds for next day to be API polite...")
             time.sleep(60)
     return
+
+collect_subms_comments_users(start_point="04/09/2021")
