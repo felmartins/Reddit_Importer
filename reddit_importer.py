@@ -155,8 +155,8 @@ def cleanup_threads(dirty_sub_db):
     try:
         global table, filterlist
         cleandb = dirty_sub_db.query("lang in @filterlist")
-        cleandb.loc[:,"proc_title"] = cleandb['title'].apply(lambda x : str.lower(x))
-        cleandb.loc[:,"proc_selftext"] = cleandb['selftext'].apply(lambda x : str.lower(x))
+        cleandb.loc[:,"proc_title"] = cleandb.loc[:,'title'].apply(lambda x : str.lower(x))
+        cleandb.loc[:,"proc_selftext"] = cleandb.loc[:,'selftext'].apply(lambda x : str.lower(x))
 
         cleandb.loc[:,"proc_title"] = cleandb.loc[:,'proc_title'].apply(lambda x : x.translate(table))
         cleandb.loc[:,"proc_selftext"] = cleandb.loc[:,'proc_selftext'].apply(lambda x : x.translate(table))
@@ -164,6 +164,7 @@ def cleanup_threads(dirty_sub_db):
         LOG_insert(logfile, formatLOG , f"Error cleaning submission data: {e}", logging.ERROR)
         quit()
     return cleandb
+
 
 def cleanup_comments(subdb, dirty_cmt_db):
     try:
@@ -204,7 +205,7 @@ def collect_subms_comments_users(batchsize = 50, start_point = "22/03/2020"):
         reddit_dictionaries.create_network(clean_b_threads, clean_b_comments, data_dict)
         b_network = pd.DataFrame.from_dict(data_dict['network'])
         postrowcount = len(clean_b_threads.index)
-        cmt_count = len(b_comments.index)
+        cmt_count = len(clean_b_comments.index)
         rd_collect = pd.DataFrame({"day": [day_str],  "batch": [batch], "dataset_posts": [prerowcount], "cleaned_posts": [postrowcount], "comments": [cmt_count]})
         LOG_insert(logfile, formatLOG, f"Sending day {day_str}, batch {batch} data to database...", logging.INFO)
         conn = sqlite3.connect("database.db")
@@ -240,12 +241,12 @@ def collect_subms_comments_users(batchsize = 50, start_point = "22/03/2020"):
                 reddit_dictionaries.create_network(clean_b_threads, clean_b_comments, data_dict)
                 b_network = pd.DataFrame.from_dict(data_dict['network'])
                 postrowcount = len(clean_b_threads.index)
-                cmt_count = len(b_comments.index)
+                cmt_count = len(clean_b_comments.index)
                 rd_collect = pd.DataFrame({"day": [day_str],  "batch": [batch], "dataset_posts": [prerowcount], "cleaned_posts": [postrowcount], "comments": [cmt_count]})
                 LOG_insert(logfile, formatLOG, f"Sending day {day_str}, batch {batch} data to database...", logging.INFO)
                 conn = sqlite3.connect("database.db")
-                b_threads.to_sql("rd_threads", con = conn, if_exists= "append", index= False)
-                b_comments.to_sql("rd_comments", con = conn, if_exists= "append", index= False)
+                clean_b_threads.to_sql("rd_threads", con = conn, if_exists= "append", index= False)
+                clean_b_comments.to_sql("rd_comments", con = conn, if_exists= "append", index= False)
                 b_subreddits.to_sql("rd_subreddits", con = conn, if_exists= "append", index= False)
                 b_users.to_sql("rd_users", con = conn, if_exists= "append", index= False)
                 b_network.to_sql("rd_network", con = conn, if_exists= "append", index= False)
